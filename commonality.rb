@@ -8,7 +8,7 @@ $url = "https://iasext.wesleyan.edu/directory_public/f?p=100:3:1657553273707010:
 # Global to store names and counts in
 $name_counts = Hash.new(0)
 
-# Array of the letters in the alphabet to recursively search through
+# Array of the letters in the alphabet to recursively search through.
 $alphabet = ("a".."z").to_a
 
 ## function add_counts()
@@ -44,7 +44,9 @@ results.
 
 =end
 
-def add_counts(name_frag)
+def add_counts(name_frag, options={})
+  defaults = { "year" => -1 }
+  options = defaults.merge(options)
   # Use Mechanize to grab the page to scrape
   mech = Mechanize.new
   mech.get($url)
@@ -70,7 +72,7 @@ def add_counts(name_frag)
   if overflow.include? "more"
     # If overflow, go deeper
     $alphabet.each do |c|
-      add_counts(name_frag + c)
+      add_counts(name_frag + c, options)
     end
   else
     # Otherwise, extract the first names from the returned page...
@@ -87,21 +89,38 @@ def add_counts(name_frag)
 end
 
 greeting = "\n\n** commonality.rb by Grant Addis **\n\n" +
-"Please select a mode:\n" +
-"[1]: Basic operation\n" +
-"[2]: Force use of external data\n" +
-"[3]: Merge common spellings in result\n\n"
+  "Please select a mode:\n" +
+  "[1]: Basic operation\n" +
+  "[2]: Force use of external data\n" +
+  "[3]: Display list with common spellings merged\n"  +
+  "[4]: Display list for each gender\n" +
+  "[5]: Display list for a specific class\n" +
+  "[6]: The Works (Force data refresh and display spelling-adjusted lists for both genders " +
+  "in a specific class)\n\n"
 
 puts greeting
 
 mode = gets.strip.to_i
 
-puts "You selected mode ##{mode}\n"
+puts "Running under mode #{mode}"
 
-# Check for local data to avoid downloading, if possible and user
+year = -1
+
+if mode == 5 || mode == 6
+  puts "Please enter a class year:"
+  year = gets.strip.to_i
+  if year >= 2015 && year <= 2018
+    puts "Filtering by Class of #{year}"
+  else
+    puts "Invald input. Exiting..."
+    exit
+  end
+end
+
+# Check for local data to avoid downloading, if possible and if user
 # did not force data refresh
 case mode
-when 1,3
+when 1,3,4,5
   if File.exist? "names.csv"
     # Read the local data, if it exists
     CSV.foreach("names.csv") do |name, count|
@@ -116,7 +135,7 @@ when 1,3
       puts "Done processing #{c}..."
     end
   end
-when 2
+when 2,6
   puts "Fetching data from live website..."
 
   $alphabet.each do |c|
