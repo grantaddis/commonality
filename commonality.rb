@@ -130,13 +130,13 @@ end
 # did not force data refresh
 case mode
 when 1,3,4,5
-  if File.exist? "raw_names_2015.csv"
+  if File.exist? ".raw_names_2015.csv"
     (2015..2018).each do |y|
-      CSV.foreach("raw_names_" + y.to_s + ".csv") do |name, count|
+      CSV.foreach(".raw_names_" + y.to_s + ".csv") do |name, count|
         $names_by_year[y][name] += count.to_i
       end
     end
-    CSV.foreach("raw_names_other.csv") do |name, count|
+    CSV.foreach(".raw_names_other.csv") do |name, count|
       $non_undergrad_names[name] += count.to_i
     end
   else
@@ -202,13 +202,18 @@ alternate_spellings = {
 
 
 # YIKES this might be dangerous political territory...
+# Stores names and best guess as to their corresponding gender.
+# For names that are used by both genders, the percentage of 
+# boys born in the 1990's with that name out of the total number
+# of children born with that name in the 90's is included.
+# Source: babynamewizard.com
 gender_categories = { 
   "Daniel" => "m", "Sarah" => "f", "Matthew" => "m", "William" => "m", "Emily" => "f", "Michael" => "m", "Rebecca" => "f", "Rachel" => "f", "Zachary" => "m", "Alexander" => "m", "Emma" => "f", "Samuel" => "m", "Hannah" => "f", "John" => "m", "James" => "m", "Christopher" => "m", "David" => "m", "Benjamin" => "m", "Jacob" => "m", "Elizabeth" => "f", "Andrew" => "m", "Jessica" => "f", "Anna" => "f", "Katherine" => "f", "Gabriel" => "m", "Joseph" => "m", "Ryan" => "m", "Julia" => "f", "Nicholas" => "m", "Jordan" => ["b", 0.705], "Joshua" => "m", "Alexandra" => "f", "Olivia" => "f", "Thomas" => "m", "Robert" => "m", "Nicole" => "f", "Samantha" => "f", "Abigail" => "f", "Adam" => "m", "Ethan" => "m", "Caroline" => "f", "Claire" => "f", "Eric" => "m", "Aaron" => "m", "Jonathan" => "m", "Sara" => "f", "Maxwell" => "m", "Jack" => "m", "Noah" => "m", "Lauren" => "f", "Dylan" => "m", "Molly" => "f", "Gregory" => "m", "Kevin" => "m", "Charles" => "m", "Peter" => "m", "Maya" => "f", "Taylor" => ["b", 0.263], "Grace" => "f", "Laura" => "f", "Jennifer" => "f", "Catherine" => "f", "Melissa" => "f", "Ian" => "m", "Max" => "m", "Zoe" => "f", "Stephen" => "m", "Justin" => "m", "Jesse" => "m", "Lily" => "f", "Victoria" => "f", "Aidan" => "m", "Madeline" => "f", "Eva" => "f", "Alison" => "f", "Paul" => "m", "Anthony" => "m", "Amy" => "f", "Chloe" => "f", "Natalie" => "f", "Jason" => "m", "Julian" => "m", "Mitchell" => "m", "Tess" => "f", "Henry" => "m", "Jackson" => "m", "Mary" => "f", "Colin" => "m", "Nathaniel" => "m", "Anne" => "f", "Patrick" => "m", "Danielle" => "f", "Isabel" => "f", "Simon" => "m", "Christina" => "f", "Christian" => "m", "Amanda" => "f", "Connor" => "m", "Angela" => "f", "Eli" => "m", "Bryan" => "m", "Brittany" => "f", "Kathryn" => "f", "Savannah" => "f", "Naomi" => "f", "Brian" => "m", "Brendan" => "m", "Kate" => "f", "Brandon" => "m", "Leah" => "f", "Erin" => "f", "Ali" => "f", "Alexis" => "f", "Madeleine" => "f", "Sophie" => "f", "Evan" => "m", "Margaret" => "f", "Kathleen" => "f", "Christine" => "f", "Morgan" => "f", "Sean" => "m", "Sophia" => "f", "Meghan" => "f", "Cameron" => "m", "Stephanie" => "f", "Timothy" => "m", "Miranda" => "f", "Avery" => ["b", 0.500], "Miriam" => "f", "Ashley" => "f", "Ella" => "f", "Hanna" => "f", "Philip" => "m", "Michelle" => "f", "Isaac" => "m", "Megan" => "f", "Isabella" => "f", "Jake" => "m", "Tyler" => "m", "Nathan" => "m", "Steven" => "m", "Ariel" => "f", "Susan" => "f", "Andrea" => "f", "Caitlin" => "f" }
 
 $merged_names = Hash.new(0)
 
 (2015..2018).each do |y|
-  CSV.open("raw_names_" + y.to_s + ".csv", "wb") do |csv|
+  CSV.open(".raw_names_" + y.to_s + ".csv", "wb") do |csv|
     $names_by_year[y].to_a.each do |pair|
       csv << pair
     end
@@ -216,7 +221,7 @@ $merged_names = Hash.new(0)
   $merged_names = $merged_names.merge($names_by_year[y]){|key, old, new| old + new}
 end
 
-CSV.open("raw_names_other.csv", "wb") do |csv|
+CSV.open(".raw_names_other.csv", "wb") do |csv|
   $non_undergrad_names.to_a.each do |pair|
     csv << pair
   end
@@ -254,6 +259,8 @@ when 3
       csv << pair
     end
   end
+
+# Alternatively, sort them by gender
 when 4
   $csv_string = "./male_names.csv and ./female_names.csv"
 
@@ -302,6 +309,62 @@ when 5
       csv << pair
     end
   end
+when 6
+  $csv_string = "./male_names_categorized_" + $year.to_s +
+    ".csv and ./female_names_categorized_" + $year.to_s + ".csv"
+
+  male_names = Hash.new(0)
+  female_names = Hash.new(0)
+
+  $names_by_year[$year].each{|name, count|
+    if gender_categories.has_key? name
+      if gender_categories[name][0] == "m"
+        male_names[name] += count.to_i
+      elsif gender_categories[name][0] == "f"
+        female_names[name] += count.to_i
+      else
+        male_count = (gender_categories[name][1] * count).round
+        female_count = count - male_count
+        male_names[name] += male_count
+        female_names[name] += female_count
+      end
+    end
+  }
+
+  male_names_categorized = Hash.new(0)
+  female_names_categorized = Hash.new(0)
+
+  male_names.each{|name, count|
+    if alternate_spellings.has_key? name
+      male_names_categorized[alternate_spellings[name]] += count.to_i
+    else
+      male_names_categorized[name] += count.to_i
+    end
+  }
+
+  female_names.each{|name, count|
+    if alternate_spellings.has_key? name
+      female_names_categorized[alternate_spellings[name]] += count.to_i
+    else
+      female_names_categorized[name] += count.to_i
+    end
+  }
+
+  $male_sorted_counts = male_names_categorized.to_a.sort_by{|n| n[1]}.reverse
+  $female_sorted_counts = female_names_categorized.to_a.sort_by{|n| n[1]}.reverse
+
+  # Write the data to disk
+  CSV.open("male_names_categorized_" + $year.to_s + ".csv", "wb") do |csv|
+   $male_sorted_counts.each do |pair|
+      csv << pair
+    end
+  end
+
+  CSV.open("female_names_categorized_" + $year.to_s + ".csv", "wb") do |csv|
+    $female_sorted_counts.each do |pair|
+      csv << pair
+    end
+  end
 else
   $csv_string = "names.csv"
 
@@ -335,6 +398,16 @@ when 4
   end
 
   puts "\nTop 25 'female' names at Wes\n"
+  (0..24).each do |i|
+    puts "#{i+1}: #{$female_sorted_counts[i][0]} (#{$female_sorted_counts[i][1]})"
+  end
+when 6
+  puts "\nTop 25 'male' name categories in the Class of " + $year.to_s + "\n"
+  (0..24).each do |i|
+    puts "#{i+1}: #{$male_sorted_counts[i][0]} (#{$male_sorted_counts[i][1]})"
+  end
+
+  puts "\nTop 25 'female' name categories in the Class of " + $year.to_s + "\n"
   (0..24).each do |i|
     puts "#{i+1}: #{$female_sorted_counts[i][0]} (#{$female_sorted_counts[i][1]})"
   end
