@@ -13,6 +13,10 @@ $names_by_year = {
   2018 => Hash.new(0)
 }
 
+# Some students are listed in the directory, but are graduate students
+# or are part of some other non-undergrad program. These will be displayed
+# when generic data is requested, but not when a specific undergrad class
+# is requested
 $non_undergrad_names = Hash.new(0)  
 
 # Array of the letters in the alphabet to recursively search through.
@@ -80,13 +84,16 @@ def add_counts(name_frag)
       add_counts(name_frag + c)
     end
   else
-    # Otherwise, extract the first names from the returned page...
+    # Otherwise, extract the first names from the returned page
     result_names = mech.page.parser.css("span[class='name']").map{|n| n.text.split(", ")[1]}
+
+    # Getting class years requires filtering through a class of spans that is
+    # used for both class year and phone number. We only want every other entry
     result_years = mech.page.parser.css("span[class='ptext']").reject.with_index{|e, i|
       i % 2 == 0}
 
-    # ...and add one to each names's count in the global array
-    # for each time it appears (and filter by class year, if applicable)
+    # Add one to each names's count in the global array
+    # for each time it appears, filtering by class year
     result_names.each_with_index do |n, i|
       if (result_years[i].text.to_i >= 2015) && (result_years[i].text.to_i <= 2018)
         $names_by_year[result_years[i].text.to_i][n] += 1
@@ -99,6 +106,8 @@ def add_counts(name_frag)
   return 0
 end
 
+# Usage notes
+
 greeting = "\n\n** commonality.rb by Grant Addis **\n\n" +
   "Please select a mode:\n" +
   "[1]: Basic operation\n" +
@@ -110,6 +119,8 @@ greeting = "\n\n** commonality.rb by Grant Addis **\n\n" +
   "in a specific class)\n\n"
 
 puts greeting
+
+# Get parameters form user and perform some basic sanitation
 
 mode = gets.strip.to_i
 
@@ -130,7 +141,7 @@ end
 # did not force data refresh
 case mode
 when 1,3,4,5
-  if File.exist? ".raw_names_2015.csv"
+  if File.exist? ".raw_names_2015.csv" # Assume one .raw file means all are there
     (2015..2018).each do |y|
       CSV.foreach(".raw_names_" + y.to_s + ".csv") do |name, count|
         $names_by_year[y][name] += count.to_i
@@ -149,6 +160,7 @@ when 1,3,4,5
     end
   end
 when 2,6
+  # If the user requests a data refresh, then start the recursion process
   puts "Fetching data from live website..."
 
   $alphabet.each do |c|
@@ -160,6 +172,7 @@ else
   exit
 end
 
+# Mappings of common spellings that cover the top 25 lists we're dealing with
 alternate_spellings = {
   "Sara" => "Sarah",
   "Matthew" => "Matt",
@@ -205,11 +218,16 @@ alternate_spellings = {
 # Stores names and best guess as to their corresponding gender.
 # For names that are used by both genders, the percentage of 
 # boys born in the 1990's with that name out of the total number
-# of children born with that name in the 90's is included.
-# Source: babynamewizard.com
+# of children born with that name in the 90's [Soure:
+# babynamewizard.com] is listed. Again, this does not cover every possible
+# name, but just the ones we run into in our top 25 lists.
 gender_categories = { 
   "Daniel" => "m", "Sarah" => "f", "Matthew" => "m", "William" => "m", "Emily" => "f", "Michael" => "m", "Rebecca" => "f", "Rachel" => "f", "Zachary" => "m", "Alexander" => "m", "Emma" => "f", "Samuel" => "m", "Hannah" => "f", "John" => "m", "James" => "m", "Christopher" => "m", "David" => "m", "Benjamin" => "m", "Jacob" => "m", "Elizabeth" => "f", "Andrew" => "m", "Jessica" => "f", "Anna" => "f", "Katherine" => "f", "Gabriel" => "m", "Joseph" => "m", "Ryan" => "m", "Julia" => "f", "Nicholas" => "m", "Jordan" => ["b", 0.705], "Joshua" => "m", "Alexandra" => "f", "Olivia" => "f", "Thomas" => "m", "Robert" => "m", "Nicole" => "f", "Samantha" => "f", "Abigail" => "f", "Adam" => "m", "Ethan" => "m", "Caroline" => "f", "Claire" => "f", "Eric" => "m", "Aaron" => "m", "Jonathan" => "m", "Sara" => "f", "Maxwell" => "m", "Jack" => "m", "Noah" => "m", "Lauren" => "f", "Dylan" => "m", "Molly" => "f", "Gregory" => "m", "Kevin" => "m", "Charles" => "m", "Peter" => "m", "Maya" => "f", "Taylor" => ["b", 0.263], "Grace" => "f", "Laura" => "f", "Jennifer" => "f", "Catherine" => "f", "Melissa" => "f", "Ian" => "m", "Max" => "m", "Zoe" => "f", "Stephen" => "m", "Justin" => "m", "Jesse" => "m", "Lily" => "f", "Victoria" => "f", "Aidan" => "m", "Madeline" => "f", "Eva" => "f", "Alison" => "f", "Paul" => "m", "Anthony" => "m", "Amy" => "f", "Chloe" => "f", "Natalie" => "f", "Jason" => "m", "Julian" => "m", "Mitchell" => "m", "Tess" => "f", "Henry" => "m", "Jackson" => "m", "Mary" => "f", "Colin" => "m", "Nathaniel" => "m", "Anne" => "f", "Patrick" => "m", "Danielle" => "f", "Isabel" => "f", "Simon" => "m", "Christina" => "f", "Christian" => "m", "Amanda" => "f", "Connor" => "m", "Angela" => "f", "Eli" => "m", "Bryan" => "m", "Brittany" => "f", "Kathryn" => "f", "Savannah" => "f", "Naomi" => "f", "Brian" => "m", "Brendan" => "m", "Kate" => "f", "Brandon" => "m", "Leah" => "f", "Erin" => "f", "Ali" => "f", "Alexis" => "f", "Madeleine" => "f", "Sophie" => "f", "Evan" => "m", "Margaret" => "f", "Kathleen" => "f", "Christine" => "f", "Morgan" => "f", "Sean" => "m", "Sophia" => "f", "Meghan" => "f", "Cameron" => "m", "Stephanie" => "f", "Timothy" => "m", "Miranda" => "f", "Avery" => ["b", 0.500], "Miriam" => "f", "Ashley" => "f", "Ella" => "f", "Hanna" => "f", "Philip" => "m", "Michelle" => "f", "Isaac" => "m", "Megan" => "f", "Isabella" => "f", "Jake" => "m", "Tyler" => "m", "Nathan" => "m", "Steven" => "m", "Ariel" => "f", "Susan" => "f", "Andrea" => "f", "Caitlin" => "f" }
 
+
+# Merge all of our hashes form each class year and graduate programs into one hash,
+# and write the data out so we don't have to query the database every time the program
+# is run.
 $merged_names = Hash.new(0)
 
 (2015..2018).each do |y|
@@ -297,6 +315,7 @@ when 4
       csv << pair
     end
   end
+# If the user only asks for one class, only sort that class's hash
 when 5
   $csv_string = "names_class_" + $year.to_s + ".csv"
 
@@ -309,9 +328,14 @@ when 5
       csv << pair
     end
   end
+
+# If the user asks for both gender sorting and spelling merging,
+# do both
 when 6
   $csv_string = "./male_names_categorized_" + $year.to_s +
     ".csv and ./female_names_categorized_" + $year.to_s + ".csv"
+
+  #First, split up the hashmap into gender lists
 
   male_names = Hash.new(0)
   female_names = Hash.new(0)
@@ -334,6 +358,7 @@ when 6
   male_names_categorized = Hash.new(0)
   female_names_categorized = Hash.new(0)
 
+  # Then merge each gender's list on spelling
   male_names.each{|name, count|
     if alternate_spellings.has_key? name
       male_names_categorized[alternate_spellings[name]] += count.to_i
@@ -350,6 +375,7 @@ when 6
     end
   }
 
+  # sort them by popularity
   $male_sorted_counts = male_names_categorized.to_a.sort_by{|n| n[1]}.reverse
   $female_sorted_counts = female_names_categorized.to_a.sort_by{|n| n[1]}.reverse
 
@@ -365,6 +391,7 @@ when 6
       csv << pair
     end
   end
+# Otherwise, just sort the merged hashmap by popularity
 else
   $csv_string = "names.csv"
 
@@ -381,6 +408,7 @@ else
   end
 end
 
+# Print the input to the terminal, and tell the user where the data is written
 case mode
 when 1,2
   puts "\nTop 25 first names at Wes:\n"
