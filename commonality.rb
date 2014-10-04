@@ -77,11 +77,15 @@ def add_counts(name_frag, options={})
   else
     # Otherwise, extract the first names from the returned page...
     result_names = mech.page.parser.css("span[class='name']").map{|n| n.text.split(", ")[1]}
+    result_years = mech.page.parser.css("span[class='ptext']").reject.with_index{|e, i|
+      i % 2 == 0}
 
     # ...and add one to each names's count in the global array
-    # for each time it appears
-    result_names.each do |n|
-      $name_counts[n] += 1
+    # for each time it appears (and filter by class year, if applicable)
+    result_names.each_with_index do |n, i|
+      if (options["year"] == -1) || (result_years[i].text.to_i == options["year"])
+        $name_counts[n] += 1
+      end
     end
   end
 
@@ -120,7 +124,7 @@ end
 # Check for local data to avoid downloading, if possible and if user
 # did not force data refresh
 case mode
-when 1,3,4,5
+when 1,3,4
   if File.exist? "names.csv"
     # Read the local data, if it exists
     CSV.foreach("names.csv") do |name, count|
@@ -131,15 +135,15 @@ when 1,3,4,5
     puts "No local data present.\n" +
       "Fetching data from live website..."
     $alphabet.each do |c|
-      add_counts(c)
+      add_counts(c, {"year" => year})
       puts "Done processing #{c}..."
     end
   end
-when 2,6
+when 2,5,6
   puts "Fetching data from live website..."
 
   $alphabet.each do |c|
-    add_counts(c)
+    add_counts(c, {"year" => year})
     puts "Done processing #{c}..."
   end
 else
@@ -154,51 +158,56 @@ end
 $name_counts["Matthew"] += 1
 $name_counts.delete("Matthew ")
 
+alternate_spellings = {
+  "Sara" => "Sarah",
+  "Matthew" => "Matt",
+  "Emilie" => "Emily",
+  "Michel" => "Michael",
+  "Becky" => "Rebecca",
+  "Rachael" => "Rachel",
+  "William" => "Will",
+  "Zachary" => "Zach",
+  "Zachariah" => "Zach",
+  "Zack" => "Zach",
+  
+  # "Alex" is a tricky case, as it can be a full
+  # male first name, or shortened version of 
+  # either the female Alexandra or male Alexander.
+  # To be safe, count them all and simply report
+  # the total under "Alex".
+  "Alexander" => "Alex",
+  "Alexandra" => "Alex",
+
+  # The same problem exists for "Sam"
+  # (Samantha and Samuel)
+  "Samuel" => "Sam",
+  "Samantha" => "Sam",
+
+  # As well as "Gabe" (Gabriel and
+  # Gabrielle)
+  "Gabriel" => "Gabe",
+  "Gabrielle" => "Gabe",
+
+  "Jonathan" => "John",
+  "Jon" => "John",
+  "Christopher" => "Chris",
+  "Benjamin" => "Ben",
+  "Katherine" => "Catherine",
+  "Nicholas" => "Nick",
+  "Joshua" => "Josh",
+  "Maxwell" => "Max"
+}
+
+
+# YIKES this might be dangerous political territory...
+gender_categories = { 
+  "Daniel" => "m", "Sarah" => "f", "Matthew" => "m", "William" => "m", "Emily" => "f", "Michael" => "m", "Rebecca" => "f", "Rachel" => "f", "Zachary" => "m", "Alexander" => "m", "Emma" => "f", "Samuel" => "m", "Hannah" => "f", "John" => "m", "James" => "m", "Christopher" => "m", "David" => "m", "Benjamin" => "m", "Jacob" => "m", "Elizabeth" => "f", "Andrew" => "m", "Jessica" => "f", "Anna" => "f", "Katherine" => "f", "Gabriel" => "m", "Joseph" => "m", "Ryan" => "m", "Julia" => "f", "Nicholas" => "m", "Jordan" => ["b", 0.705], "Joshua" => "m", "Alexandra" => "f", "Olivia" => "f", "Thomas" => "m", "Robert" => "m", "Nicole" => "f", "Samantha" => "f", "Abigail" => "f", "Adam" => "m", "Ethan" => "m", "Caroline" => "f", "Claire" => "f", "Eric" => "m", "Aaron" => "m", "Jonathan" => "m", "Sara" => "f", "Maxwell" => "m", "Jack" => "m", "Noah" => "m", "Lauren" => "f", "Dylan" => "m", "Molly" => "f", "Gregory" => "m", "Kevin" => "m", "Charles" => "m", "Peter" => "m", "Maya" => "f", "Taylor" => ["b", 0.263], "Grace" => "f", "Laura" => "f", "Jennifer" => "f", "Catherine" => "f", "Melissa" => "f", "Ian" => "m", "Max" => "m", "Zoe" => "f", "Stephen" => "m", "Justin" => "m", "Jesse" => "m", "Lily" => "f", "Victoria" => "f", "Aidan" => "m", "Madeline" => "f", "Eva" => "f", "Alison" => "f", "Paul" => "m", "Anthony" => "m", "Amy" => "f", "Chloe" => "f", "Natalie" => "f", "Jason" => "m", "Julian" => "m", "Mitchell" => "m", "Tess" => "f", "Henry" => "m", "Jackson" => "m", "Mary" => "f", "Colin" => "m", "Nathaniel" => "m", "Anne" => "f", "Patrick" => "m", "Danielle" => "f", "Isabel" => "f", "Simon" => "m", "Christina" => "f", "Christian" => "m", "Amanda" => "f", "Connor" => "m", "Angela" => "f", "Eli" => "m", "Bryan" => "m", "Brittany" => "f", "Kathryn" => "f", "Savannah" => "f", "Naomi" => "f", "Brian" => "m", "Brendan" => "m", "Kate" => "f", "Brandon" => "m", "Leah" => "f", "Erin" => "f", "Ali" => "f", "Alexis" => "f", "Madeleine" => "f", "Sophie" => "f", "Evan" => "m", "Margaret" => "f", "Kathleen" => "f", "Christine" => "f", "Morgan" => "f", "Sean" => "m", "Sophia" => "f", "Meghan" => "f", "Cameron" => "m", "Stephanie" => "f", "Timothy" => "m", "Miranda" => "f", "Avery" => ["b", 0.500], "Miriam" => "f", "Ashley" => "f", "Ella" => "f", "Hanna" => "f", "Philip" => "m", "Michelle" => "f", "Isaac" => "m", "Megan" => "f", "Isabella" => "f", "Jake" => "m", "Tyler" => "m", "Nathan" => "m", "Steven" => "m", "Ariel" => "f", "Susan" => "f", "Andrea" => "f", "Caitlin" => "f" }
+
 # If the user requests that names be sorted into categories of similar
 # spelling, merge different names under a shortened header
 case mode
 when 3
   name_categories = Hash.new(0)
-
-  alternate_spellings = {
-    "Sara" => "Sarah",
-    "Matthew" => "Matt",
-    "Emilie" => "Emily",
-    "Michel" => "Michael",
-    "Becky" => "Rebecca",
-    "Rachael" => "Rachel",
-    "William" => "Will",
-    "Zachary" => "Zach",
-    "Zachariah" => "Zach",
-    "Zack" => "Zach",
-    
-    # "Alex" is a tricky case, as it can be a full
-    # male first name, or shortened version of 
-    # either the female Alexandra or male Alexander.
-    # To be safe, count them all and simply report
-    # the total under "Alex".
-    "Alexander" => "Alex",
-    "Alexandra" => "Alex",
-
-    # The same problem exists for "Sam"
-    # (Samantha and Samuel)
-    "Samuel" => "Sam",
-    "Samantha" => "Sam",
-
-    # As well as "Gabe" (Gabriel and
-    # Gabrielle)
-    "Gabriel" => "Gabe",
-    "Gabrielle" => "Gabe",
-
-    "Jonathan" => "John",
-    "Jon" => "John",
-    "Christopher" => "Chris",
-    "Benjamin" => "Ben",
-    "Katherine" => "Catherine",
-    "Nicholas" => "Nick",
-    "Joshua" => "Josh",
-    "Maxwell" => "Max"
-  }
   
   $name_counts.each{|name, count|
     if alternate_spellings.has_key? name
@@ -212,6 +221,50 @@ when 3
 
   # Write the data to disk
   CSV.open("names_categorized.csv", "wb") do |csv|
+    $sorted_counts.each do |pair|
+      csv << pair
+    end
+  end
+when 4
+  male_names = Hash.new(0)
+  female_names = Hash.new(0)
+
+  $name_counts.each{|name, count|
+    if gender_categories.has_key? name
+      if gender_categories[name][0] == "m"
+        male_names[name] += count.to_i
+      elsif gender_categories[name][0] == "f"
+        female_names[name] += count.to_i
+      else
+        male_count = (gender_categories[name][1] * count).round
+        female_count = count - male_count
+        male_names[name] += male_count
+        female_names[name] += female_count
+      end
+    end
+  }
+
+  $male_sorted_counts = male_names.to_a.sort_by{|n| n[1]}.reverse
+  $female_sorted_counts = female_names.to_a.sort_by{|n| n[1]}.reverse
+
+  # Write the data to disk
+  CSV.open("male_names.csv", "wb") do |csv|
+    $male_sorted_counts.each do |pair|
+      csv << pair
+    end
+  end
+
+  CSV.open("female_names.csv", "wb") do |csv|
+    $female_sorted_counts.each do |pair|
+      csv << pair
+    end
+  end
+when 5
+  # Sort by names by frequency, descending
+  $sorted_counts = $name_counts.to_a.sort_by{|n| n[1]}.reverse
+
+  # Write the data to disk and distinguish the class
+  CSV.open("names_class_" + year.to_s + ".csv", "wb") do |csv|
     $sorted_counts.each do |pair|
       csv << pair
     end
@@ -237,8 +290,20 @@ when 3
   puts "\nTop 25 first name categories at Wes\n"
 end
 
-(0..24).each do |i|
-  puts "#{i+1}: #{$sorted_counts[i][0]} (#{$sorted_counts[i][1]})"
-end
+case mode
+when 4
+  puts "\nTop 25 'male' names at Wes\n"
+  (0..24).each do |i|
+    puts "#{i+1}: #{$male_sorted_counts[i][0]} (#{$male_sorted_counts[i][1]})"
+  end
 
-puts "\nThis information is also stored in ./names.csv."
+  puts "\nTop 25 'female' names at Wes\n"
+  (0..24).each do |i|
+    puts "#{i+1}: #{$female_sorted_counts[i][0]} (#{$female_sorted_counts[i][1]})"
+  end
+else
+  (0..24).each do |i|
+    puts "#{i+1}: #{$sorted_counts[i][0]} (#{$sorted_counts[i][1]})"
+  end
+end
+puts "\nThis information is also stored in a csv."
