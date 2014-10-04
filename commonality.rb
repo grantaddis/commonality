@@ -5,8 +5,14 @@ require 'mechanize'
 # The Wesleyan Student directory link to scrape from
 $url = "https://iasext.wesleyan.edu/directory_public/f?p=100:3:1657553273707010::::::"
 
-# Global to store names and counts in
-$name_counts = Hash.new(0)
+# Global to store our accumulated data
+$names_by_year = { 
+  2015 => Hash.new(0), 
+  2016 => Hash.new(0), 
+  2017 => Hash.new(0),
+  2018 => Hash.new(0)
+}
+  
 
 # Array of the letters in the alphabet to recursively search through.
 $alphabet = ("a".."z").to_a
@@ -44,9 +50,7 @@ results.
 
 =end
 
-def add_counts(name_frag, options={})
-  defaults = { "year" => -1 }
-  options = defaults.merge(options)
+def add_counts(name_frag)
   # Use Mechanize to grab the page to scrape
   mech = Mechanize.new
   mech.get($url)
@@ -72,7 +76,7 @@ def add_counts(name_frag, options={})
   if overflow.include? "more"
     # If overflow, go deeper
     $alphabet.each do |c|
-      add_counts(name_frag + c, options)
+      add_counts(name_frag + c)
     end
   else
     # Otherwise, extract the first names from the returned page...
@@ -83,8 +87,8 @@ def add_counts(name_frag, options={})
     # ...and add one to each names's count in the global array
     # for each time it appears (and filter by class year, if applicable)
     result_names.each_with_index do |n, i|
-      if (options["year"] == -1) || (result_years[i].text.to_i == options["year"])
-        $name_counts[n] += 1
+      if (result_years[i].text.to_i >= 2015) && (result_years[i].text.to_i <= 2018)
+        $names_by_year[result_years[i].text.to_i][n] += 1
       end
     end
   end
@@ -108,15 +112,13 @@ mode = gets.strip.to_i
 
 puts "Running under mode #{mode}"
 
-year = -1
-
 if mode == 5 || mode == 6
   puts "Please enter a class year:"
-  year = gets.strip.to_i
-  if year >= 2015 && year <= 2018
-    puts "Filtering by Class of #{year}"
+  $year = gets.strip.to_i
+  if ($year >= 2015) && ($year <= 2018)
+    puts "Filtering by Class of #{$year}"
   else
-    puts "Invald input. Exiting..."
+    puts "Invald input. Exiting from range check..."
     exit
   end
 end
@@ -124,39 +126,33 @@ end
 # Check for local data to avoid downloading, if possible and if user
 # did not force data refresh
 case mode
-when 1,3,4
-  if File.exist? "names.csv"
-    # Read the local data, if it exists
-    CSV.foreach("names.csv") do |name, count|
-      $name_counts[name] += count.to_i
+when 1,3,4,5
+  if File.exist? "raw_names_2015.csv"
+    (2015..2018).each do |y|
+      CSV.foreach("raw_names_" + y.to_s + ".csv") do |name, count|
+        $names_by_year[y][name] += count.to_i
+      end
     end
   else
     # Otherwise, start the recursion process
     puts "No local data present.\n" +
       "Fetching data from live website..."
     $alphabet.each do |c|
-      add_counts(c, {"year" => year})
+      add_counts(c)
       puts "Done processing #{c}..."
     end
   end
-when 2,5,6
+when 2,6
   puts "Fetching data from live website..."
 
   $alphabet.each do |c|
-    add_counts(c, {"year" => year})
+    add_counts(c)
     puts "Done processing #{c}..."
   end
 else
   puts "Invalid input. Exiting."
   exit
 end
-
-# There is a bug either in the database or in Mechanize; 
-# a student named Matthew Metros comes back with the first name
-# "Matthew " (with a trailing space).
-
-$name_counts["Matthew"] += 1
-$name_counts.delete("Matthew ")
 
 alternate_spellings = {
   "Sara" => "Sarah",
@@ -203,6 +199,24 @@ alternate_spellings = {
 gender_categories = { 
   "Daniel" => "m", "Sarah" => "f", "Matthew" => "m", "William" => "m", "Emily" => "f", "Michael" => "m", "Rebecca" => "f", "Rachel" => "f", "Zachary" => "m", "Alexander" => "m", "Emma" => "f", "Samuel" => "m", "Hannah" => "f", "John" => "m", "James" => "m", "Christopher" => "m", "David" => "m", "Benjamin" => "m", "Jacob" => "m", "Elizabeth" => "f", "Andrew" => "m", "Jessica" => "f", "Anna" => "f", "Katherine" => "f", "Gabriel" => "m", "Joseph" => "m", "Ryan" => "m", "Julia" => "f", "Nicholas" => "m", "Jordan" => ["b", 0.705], "Joshua" => "m", "Alexandra" => "f", "Olivia" => "f", "Thomas" => "m", "Robert" => "m", "Nicole" => "f", "Samantha" => "f", "Abigail" => "f", "Adam" => "m", "Ethan" => "m", "Caroline" => "f", "Claire" => "f", "Eric" => "m", "Aaron" => "m", "Jonathan" => "m", "Sara" => "f", "Maxwell" => "m", "Jack" => "m", "Noah" => "m", "Lauren" => "f", "Dylan" => "m", "Molly" => "f", "Gregory" => "m", "Kevin" => "m", "Charles" => "m", "Peter" => "m", "Maya" => "f", "Taylor" => ["b", 0.263], "Grace" => "f", "Laura" => "f", "Jennifer" => "f", "Catherine" => "f", "Melissa" => "f", "Ian" => "m", "Max" => "m", "Zoe" => "f", "Stephen" => "m", "Justin" => "m", "Jesse" => "m", "Lily" => "f", "Victoria" => "f", "Aidan" => "m", "Madeline" => "f", "Eva" => "f", "Alison" => "f", "Paul" => "m", "Anthony" => "m", "Amy" => "f", "Chloe" => "f", "Natalie" => "f", "Jason" => "m", "Julian" => "m", "Mitchell" => "m", "Tess" => "f", "Henry" => "m", "Jackson" => "m", "Mary" => "f", "Colin" => "m", "Nathaniel" => "m", "Anne" => "f", "Patrick" => "m", "Danielle" => "f", "Isabel" => "f", "Simon" => "m", "Christina" => "f", "Christian" => "m", "Amanda" => "f", "Connor" => "m", "Angela" => "f", "Eli" => "m", "Bryan" => "m", "Brittany" => "f", "Kathryn" => "f", "Savannah" => "f", "Naomi" => "f", "Brian" => "m", "Brendan" => "m", "Kate" => "f", "Brandon" => "m", "Leah" => "f", "Erin" => "f", "Ali" => "f", "Alexis" => "f", "Madeleine" => "f", "Sophie" => "f", "Evan" => "m", "Margaret" => "f", "Kathleen" => "f", "Christine" => "f", "Morgan" => "f", "Sean" => "m", "Sophia" => "f", "Meghan" => "f", "Cameron" => "m", "Stephanie" => "f", "Timothy" => "m", "Miranda" => "f", "Avery" => ["b", 0.500], "Miriam" => "f", "Ashley" => "f", "Ella" => "f", "Hanna" => "f", "Philip" => "m", "Michelle" => "f", "Isaac" => "m", "Megan" => "f", "Isabella" => "f", "Jake" => "m", "Tyler" => "m", "Nathan" => "m", "Steven" => "m", "Ariel" => "f", "Susan" => "f", "Andrea" => "f", "Caitlin" => "f" }
 
+$merged_names = Hash.new(0)
+
+(2015..2018).each do |y|
+  CSV.open("raw_names_" + y.to_s + ".csv", "wb") do |csv|
+    $names_by_year[y].to_a.each do |pair|
+      csv << pair
+    end
+  end
+  $merged_names = $merged_names.merge($names_by_year[y]){|key, old, new| old + new}
+end
+
+# There is a bug either in the database or in Mechanize; 
+# a student named Matthew Metros comes back with the first name
+# "Matthew " (with a trailing space).
+
+$merged_names["Matthew"] += 1
+$merged_names.delete("Matthew ")
+
 # If the user requests that names be sorted into categories of similar
 # spelling, merge different names under a shortened header
 case mode
@@ -211,7 +225,7 @@ when 3
 
   name_categories = Hash.new(0)
   
-  $name_counts.each{|name, count|
+  $merged_names.each{|name, count|
     if alternate_spellings.has_key? name
       name_categories[alternate_spellings[name]] += count.to_i
     else
@@ -233,7 +247,7 @@ when 4
   male_names = Hash.new(0)
   female_names = Hash.new(0)
 
-  $name_counts.each{|name, count|
+  $merged_names.each{|name, count|
     if gender_categories.has_key? name
       if gender_categories[name][0] == "m"
         male_names[name] += count.to_i
@@ -264,13 +278,13 @@ when 4
     end
   end
 when 5
-  $csv_string = "names_class_" + year.to_s + ".csv"
+  $csv_string = "names_class_" + $year.to_s + ".csv"
 
   # Sort by names by frequency, descending
-  $sorted_counts = $name_counts.to_a.sort_by{|n| n[1]}.reverse
+  $sorted_counts = $names_by_year[$year].to_a.sort_by{|n| n[1]}.reverse
 
   # Write the data to disk and distinguish the class
-  CSV.open("names_class_" + year.to_s + ".csv", "wb") do |csv|
+  CSV.open("names_class_" + $year.to_s + ".csv", "wb") do |csv|
     $sorted_counts.each do |pair|
       csv << pair
     end
@@ -279,7 +293,7 @@ else
   $csv_string = "names.csv"
 
   # Sort by names by frequency, descending
-  $sorted_counts = $name_counts.to_a.sort_by{|n| n[1]}.reverse
+  $sorted_counts = $merged_names.to_a.sort_by{|n| n[1]}.reverse
 
   # Write the data to disk, if it wasn't there already
   if !File.exist? "names.csv"
@@ -297,7 +311,7 @@ when 1,2
 when 3
   puts "\nTop 25 first name categories at Wes\n"
 when 5
-  puts "\nTop 25 first names in the Class of " + year + "\n"
+  puts "\nTop 25 first names in the Class of " + $year.to_s + "\n"
 end
 
 case mode
