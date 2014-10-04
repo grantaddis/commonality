@@ -111,7 +111,7 @@ end
 greeting = "\n\n** commonality.rb by Grant Addis **\n\n" +
   "Please select a mode:\n" +
   "[1]: Basic operation\n" +
-  "[2]: Force use of external data\n" +
+  "[2]: Force reload of external data\n" +
   "[3]: Display list with common spellings merged\n"  +
   "[4]: Display list for each gender\n" +
   "[5]: Display list for a specific class\n" +
