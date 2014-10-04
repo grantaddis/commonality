@@ -12,7 +12,8 @@ $names_by_year = {
   2017 => Hash.new(0),
   2018 => Hash.new(0)
 }
-  
+
+$non_undergrad_names = Hash.new(0)  
 
 # Array of the letters in the alphabet to recursively search through.
 $alphabet = ("a".."z").to_a
@@ -89,6 +90,8 @@ def add_counts(name_frag)
     result_names.each_with_index do |n, i|
       if (result_years[i].text.to_i >= 2015) && (result_years[i].text.to_i <= 2018)
         $names_by_year[result_years[i].text.to_i][n] += 1
+      else
+        $non_undergrad_names[n] += 1
       end
     end
   end
@@ -132,6 +135,9 @@ when 1,3,4,5
       CSV.foreach("raw_names_" + y.to_s + ".csv") do |name, count|
         $names_by_year[y][name] += count.to_i
       end
+    end
+    CSV.foreach("raw_names_other.csv") do |name, count|
+      $non_undergrad_names[name] += count.to_i
     end
   else
     # Otherwise, start the recursion process
@@ -209,6 +215,13 @@ $merged_names = Hash.new(0)
   end
   $merged_names = $merged_names.merge($names_by_year[y]){|key, old, new| old + new}
 end
+
+CSV.open("raw_names_other.csv", "wb") do |csv|
+  $non_undergrad_names.to_a.each do |pair|
+    csv << pair
+  end
+end
+$merged_names = $merged_names.merge($non_undergrad_names){|key, old, new| old + new}
 
 # There is a bug either in the database or in Mechanize; 
 # a student named Matthew Metros comes back with the first name
