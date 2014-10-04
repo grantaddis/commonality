@@ -207,6 +207,8 @@ gender_categories = {
 # spelling, merge different names under a shortened header
 case mode
 when 3
+  $csv_string = "./names_categorized.csv"
+
   name_categories = Hash.new(0)
   
   $name_counts.each{|name, count|
@@ -226,6 +228,8 @@ when 3
     end
   end
 when 4
+  $csv_string = "./male_names.csv and ./female_names.csv"
+
   male_names = Hash.new(0)
   female_names = Hash.new(0)
 
@@ -260,6 +264,8 @@ when 4
     end
   end
 when 5
+  $csv_string = "names_class_" + year.to_s + ".csv"
+
   # Sort by names by frequency, descending
   $sorted_counts = $name_counts.to_a.sort_by{|n| n[1]}.reverse
 
@@ -270,6 +276,8 @@ when 5
     end
   end
 else
+  $csv_string = "names.csv"
+
   # Sort by names by frequency, descending
   $sorted_counts = $name_counts.to_a.sort_by{|n| n[1]}.reverse
 
@@ -288,6 +296,8 @@ when 1,2
   puts "\nTop 25 first names at Wes:\n"
 when 3
   puts "\nTop 25 first name categories at Wes\n"
+when 5
+  puts "\nTop 25 first names in the Class of " + year + "\n"
 end
 
 case mode
@@ -306,4 +316,4 @@ else
     puts "#{i+1}: #{$sorted_counts[i][0]} (#{$sorted_counts[i][1]})"
   end
 end
-puts "\nThis information is also stored in a csv."
+puts "\nThis information has also been written to " + $csv_string + "."
