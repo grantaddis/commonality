@@ -19,9 +19,6 @@ $names_by_year = {
 # is requested
 $non_undergrad_names = Hash.new(0)  
 
-# Array of the letters in the alphabet to recursively search through.
-$alphabet = ("a".."z").to_a
-
 ## function add_counts()
 
 =begin
@@ -80,7 +77,7 @@ def add_counts(name_frag)
 
   if overflow.include? "more"
     # If overflow, go deeper
-    $alphabet.each do |c|
+    ('a'..'z').each do |c|
       add_counts(name_frag + c)
     end
   else
@@ -154,7 +151,7 @@ when 1,3,4,5
     # Otherwise, start the recursion process
     puts "No local data present.\n" +
       "Fetching data from live website..."
-    $alphabet.each do |c|
+    ('a'..'z').each do |c|
       add_counts(c)
       puts "Done processing #{c}..."
     end
@@ -163,7 +160,7 @@ when 2,6
   # If the user requests a data refresh, then start the recursion process
   puts "Fetching data from live website..."
 
-  $alphabet.each do |c|
+  ('a'..'z').each do |c|
     add_counts(c)
     puts "Done processing #{c}..."
   end
